@@ -31,12 +31,12 @@ server {
   # Proxy API calls to feed-api (strip /api)
   location /api/ {
     # IMPORTANT: keep trailing slash
-    set $upstream "http://n444co0cskos884scok8wcso.76.13.11.155.sslip.io/";
+    set $upstream "https://api.newsery.app/";
+    proxy_set_header Host api.newsery.app;
     rewrite ^/api/(.*)$ /$1 break;
     proxy_pass $upstream;
 
     proxy_http_version 1.1;
-    proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
