@@ -1,0 +1,18 @@
+/* Global reset for app layout */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
+}

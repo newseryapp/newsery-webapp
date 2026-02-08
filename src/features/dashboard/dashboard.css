@@ -1,0 +1,269 @@
+.dash{
+  height: calc(100vh - 72px - 44px); /* topbar + footer */
+  display:grid;
+  /* Desktop-only: 3 kolon her zaman kalsın.
+     Geniş ekranlarda max ölçüler; daraldıkça min değerlere doğru küçülür. */
+  grid-template-columns: minmax(220px, 320px) minmax(420px, 720px) minmax(220px, 360px);
+  justify-content: center;
+
+  gap: clamp(14px, 1.4vw, 18px);
+}
+
+.panel{
+  background: rgba(255,255,255,.18);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  overflow: hidden;
+  display:flex;
+  flex-direction:column;
+  min-height: 0;
+}
+
+
+
+.panelTitle{
+  padding: 16px 18px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  color: rgba(15,23,42,.55);
+  border-bottom: 1px solid var(--stroke);
+}
+
+.panelBody{
+  padding: 18px;
+  overflow:auto;
+}
+
+.placeholder{
+  height: 120px;
+  border: 1px dashed rgba(15,23,42,.25);
+  border-radius: 10px;
+  display:grid;
+  place-items:center;
+  color: rgba(15,23,42,.55);
+  background: rgba(255,255,255,.22);
+}
+
+.categoryList{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.catBtn{
+  padding:12px 14px;
+  border-radius:8px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.35);
+  color:var(--ink);
+  font-weight:600;
+  text-align:left;
+  cursor:pointer;
+  transition:background .15s ease, border-color .15s ease;
+}
+
+.catBtn:hover{
+  background:rgba(255,255,255,.55);
+}
+
+.catBtn.active{
+  background:rgba(63,83,107,.95);
+  color:white;
+  border-color:rgba(63,83,107,1);
+}
+.panelHint{
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: rgba(15,23,42,.45);
+  margin-top: 6px;
+}
+
+.panelFooter{
+  padding: 12px 18px;
+  border-top: 1px solid var(--stroke);
+  color: rgba(15,23,42,.55);
+  font-size: 13px;
+  background: rgba(255,255,255,.10);
+}
+
+.counter strong{ color: rgba(15,23,42,.80); }
+
+.catBtn{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.catBtn:disabled{
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.tag{
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.25);
+  border: 1px solid rgba(255,255,255,.25);
+  color: rgba(255,255,255,.90);
+}
+
+.mixSelected{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom: 14px;
+}
+
+.mixChip{
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,.35);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mixChip.on{
+  background: rgba(255,255,255,.65);
+  border-color: rgba(15,23,42,.25);
+}
+
+.saveBtn{
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,42,.25);
+  background: rgba(63,83,107,.95);
+  color: white;
+  font-weight: 900;
+  letter-spacing: .3px;
+  cursor: pointer;
+}
+
+.saveBtn:disabled{
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.microHint{
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(15,23,42,.55);
+}
+
+.mixList{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.mixRow{
+  padding:12px;
+  border-radius:10px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.35);
+}
+
+.mixRow.active{
+  background: rgba(255,255,255,.60);
+  border-color: rgba(15,23,42,.30);
+}
+
+.mixLabel{
+  font-weight:800;
+  margin-bottom:8px;
+}
+
+.mixControls{
+  display:grid;
+  grid-template-columns: 36px 1fr 36px 48px;
+  align-items:center;
+  gap:10px;
+}
+
+.mixControls button{
+  height:32px;
+  border-radius:8px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.55);
+  font-size:18px;
+  cursor:pointer;
+}
+
+.mixControls button:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+.mixBar{
+  height:12px;
+  border-radius:999px;
+  background: rgba(15,23,42,.15);
+  overflow:hidden;
+}
+
+.mixFill{
+  height:100%;
+  background: rgba(63,83,107,.95);
+}
+
+.mixValue{
+  font-weight:800;
+  text-align:right;
+}
+.saveRow{
+  margin-top: 14px;
+  display:flex;
+  gap:10px;
+}
+
+.saveAsNewBtn{
+  width: 160px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,42,.25);
+  background: rgba(255,255,255,.45);
+  color: rgba(15,23,42,.85);
+  font-weight: 900;
+  letter-spacing: .2px;
+  cursor: pointer;
+}
+
+.saveAsNewBtn:disabled{
+  opacity: .45;
+  cursor:not-allowed;
+}
+
+.disabledPanel{
+  opacity: .55;
+  pointer-events: none;
+  filter: grayscale(.2);
+}
+
+.panelSub{
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: rgba(15,23,42,.45);
+  margin-left: 8px;
+}
+
+.toast{
+  position: fixed;
+  top: 84px;         /* topbar altı */
+  right: 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(63,83,107,.96);
+  color: white;
+  font-weight: 900;
+  box-shadow: 0 10px 26px rgba(0,0,0,.18);
+  z-index: 80;
+  max-width: 420px;
+}

@@ -1,0 +1,159 @@
+/* FEED CARDS */
+.feedsList{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.feedCard{
+  text-align:left;
+  padding:14px 14px;
+  border-radius:12px;
+  border:1px solid var(--stroke);
+  background: rgba(63,83,107,.92);
+  color: white;
+  cursor:pointer;
+}
+
+.feedCard:hover{
+  filter: brightness(1.03);
+}
+
+.feedCard.active{
+  outline: none;
+  border: 2px solid #ff9f1c; /* portakal */
+}
+
+.feedTitle{
+  font-weight:900;
+  font-size:18px;
+  letter-spacing:.2px;
+}
+
+.feedMeta{
+  margin-top:6px;
+  opacity:.75;
+  font-size:13px;
+  line-height:1.25;
+}
+
+.feedAction{
+  margin-top:12px;
+  display:inline-block;
+  padding:10px 12px;
+  border-radius:10px;
+  background: rgba(26, 180, 255, .85);
+  color: rgba(15,23,42,.95);
+  font-weight:900;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+}
+
+/* MODAL */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+
+.modalCard{
+  width: min(520px, calc(100vw - 28px));
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.20);
+  background: rgba(63,83,107,.98);
+  color: white;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+
+.modalTitle{
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.modalSub{
+  margin-top: 6px;
+  opacity: .78;
+  font-size: 13px;
+}
+
+.modalInput{
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.12);
+  color: white;
+  outline: none;
+}
+
+.modalInput::placeholder{
+  color: rgba(255,255,255,.55);
+}
+
+.modalActions{
+  margin-top: 14px;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.btnGhost{
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: transparent;
+  color: white;
+  font-weight: 800;
+  cursor:pointer;
+}
+
+.btnPrimary{
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(122,163,207,.95);
+  color: rgba(15,23,42,.95);
+  font-weight: 900;
+  cursor:pointer;
+}
+
+.btnPrimary:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+.feedCard{
+  position: relative;
+}
+
+.feedRemove{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.10);
+  color: rgba(255,255,255,.92);
+  font-weight:900;
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  opacity:.65;
+}
+
+.feedCard:hover .feedRemove{
+  opacity: 1;
+}
+
+.feedRemove:hover{
+  background: rgba(255,255,255,.18);
+}
