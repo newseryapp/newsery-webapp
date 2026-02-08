@@ -25,14 +25,10 @@ server {
   root /usr/share/nginx/html;
   index index.html;
 
-  # DNS resolver for proxy_pass to hostname
-  resolver 1.1.1.1 8.8.8.8 valid=30s ipv6=off;
-
   # Proxy API calls to feed-api (strip /api)
   location /api/ {
     # IMPORTANT: keep trailing slash
-    set $upstream "https://api.newsery.app/";
-    proxy_set_header Host api.newsery.app;
+    set $upstream "http://feed-api:3000/";
     rewrite ^/api/(.*)$ /$1 break;
     proxy_pass $upstream;
 
