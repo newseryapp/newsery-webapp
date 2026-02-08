@@ -30,7 +30,7 @@ server {
   # Proxy API calls to feed-api (strip /api)
   location /api/ {
     # IMPORTANT: keep trailing slash
-    set $upstream "http://feed-api:3000/";
+    set $upstream "http://lc8ocsosgw8wwwwcow80soo4:3000/";
     rewrite ^/api/(.*)$ /$1 break;
     proxy_pass $upstream;
 
