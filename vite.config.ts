@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://n444co0cskos884scok8wcso.76.13.11.155.sslip.io",
+        target: "http://feed-api:3000",
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ""),

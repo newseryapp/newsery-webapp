@@ -1,13 +1,10 @@
 # ---------- Build stage ----------
 FROM node:22-alpine AS build
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm ci
-
 COPY . .
 RUN npm run build
-
 
 # ---------- Runtime stage (Nginx) ----------
 FROM nginx:alpine
@@ -21,7 +18,6 @@ RUN cat > /etc/nginx/conf.d/default.conf <<'NGINX'
 server {
   listen 80;
   server_name _;
-
   root /usr/share/nginx/html;
   index index.html;
 
@@ -30,10 +26,9 @@ server {
   # Proxy API calls to feed-api (strip /api)
   location /api/ {
     # IMPORTANT: keep trailing slash
-    set $upstream "http://n444co0cskos884scok8wcso:3000/";
+    set $upstream "http://feed-api:3000/";
     rewrite ^/api/(.*)$ /$1 break;
     proxy_pass $upstream;
-
     proxy_http_version 1.1;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
