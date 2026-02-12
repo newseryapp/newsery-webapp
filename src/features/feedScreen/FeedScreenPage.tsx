@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Article, Feed } from "./types";
 import { loadFeeds, loadSaved, saveSaved } from "./storage";
 import { fetchFeedFromApi, weightsToMix } from "./fetchFeed";
+import { formatRelativeTime } from "../../app/utils/time";
 import "./feedScreen.css";
 
 type Mode = "list" | "reader";
@@ -326,7 +327,7 @@ export default function FeedScreenPage() {
                     <div className="fs-articleMeta">
                       <span>{a.sourceName || "Source"}</span>
                       <span className="fs-dot">•</span>
-                      <span>{a.publishedAt || ""}</span>
+                      <span>{formatRelativeTime(a.publishedAt)}</span>
                     </div>
 
                     <div
@@ -392,7 +393,7 @@ export default function FeedScreenPage() {
                       <div className="fs-articleMeta">
                         <span>{a.sourceName || "Source"}</span>
                         <span className="fs-dot">•</span>
-                        <span>{a.publishedAt || ""}</span>
+                        <span>{formatRelativeTime(a.publishedAt)}</span>
                       </div>
                       <div
                         className="fs-articleActions"
