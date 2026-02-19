@@ -1,5 +1,10 @@
 .dash{
   height: calc(100vh - 72px - 44px); /* topbar + footer */
+  min-height: 0;
+}
+
+.dashScroller{
+  height: 100%;
   display:grid;
   /* Desktop-only: 3 kolon her zaman kalsın.
      Geniş ekranlarda max ölçüler; daraldıkça min değerlere doğru küçülür. */
@@ -7,6 +12,10 @@
   justify-content: center;
 
   gap: clamp(14px, 1.4vw, 18px);
+}
+
+.dashDots{
+  display:none;
 }
 
 .panel{
@@ -266,4 +275,79 @@
   box-shadow: 0 10px 26px rgba(0,0,0,.18);
   z-index: 80;
   max-width: 420px;
+}
+
+@media (max-width: 900px){
+  .dash{
+    display:flex;
+    flex-direction:column;
+    overflow: hidden;
+  }
+
+  .dashScroller{
+    display:flex;
+    flex: 1;
+    height: auto;
+    justify-content:flex-start;
+    align-items:stretch;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    width:100%;
+    gap: 0;
+    padding-bottom: 48px;
+  }
+
+  .dashScroller{
+    scrollbar-width: none;
+  }
+
+  .dashScroller::-webkit-scrollbar{
+    display:none;
+  }
+
+  .dashScroller > .panel{
+    flex: 0 0 100%;
+    min-width: 100%;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .panelBody{
+    overflow:auto;
+  }
+
+  .dashDots{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    align-items:center;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    z-index: 100;
+    padding:10px 0;
+  }
+
+  .dashDot{
+    font-size:14px;
+    opacity:.45;
+    user-select:none;
+    line-height:1;
+    border:0;
+    background:transparent;
+    padding:0;
+    cursor:pointer;
+  }
+
+  .dashDot.isActive{
+    opacity:1;
+  }
 }

@@ -5,9 +5,6 @@
   --ink:#0f172a;
   --muted:rgba(15,23,42,.70);
   --stroke:rgba(15,23,42,.18);
-  --pill:#e9eef5;
-  --cta:#7aa3cf;
-  --ctaText:#0f172a;
 }
 
 *{ box-sizing:border-box; }
@@ -49,41 +46,26 @@ body{ margin:0; background:var(--page); color:var(--ink); font-family: system-ui
   display: block;
 }
 .brandName{ font-weight:700; letter-spacing:.2px; }
-.brandTagline{ font-size:12px; opacity:.75; margin-top:2px; }
 
-.topbarRight{ display:flex; align-items:center; gap:12px; }
+.topbarRight{ display:flex; align-items:center; gap:8px; }
 
-.topBtn{
-  border: 1px solid rgba(15,23,42,.18);
-  background: rgba(255,255,255,.65);
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-weight: 600;
+.topbarDashBtn{
+  border: 1px solid rgba(255,255,255,.28);
+  background: rgba(255,255,255,.18);
+  color: white;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.1;
   cursor: pointer;
 }
-.topBtn:hover{
-  background: rgba(255,255,255,.85);
+.topbarDashBtn:hover{
+  background: rgba(255,255,255,.28);
 }
-
-.pill{
-  background:var(--pill);
-  color:var(--ink);
-  padding:10px 14px;
-  border-radius:8px;
-  border:1px solid rgba(255,255,255,.25);
-  font-weight:600;
-  min-width:120px;
-  text-align:center;
-}
-
-.cta{
-  background:var(--cta);
-  color:var(--ctaText);
-  padding:10px 14px;
-  border-radius:8px;
-  text-decoration:none;
-  font-weight:700;
-  border:1px solid rgba(255,255,255,.25);
+.topbarDashBtn:focus-visible{
+  outline: 2px solid rgba(255,255,255,.55);
+  outline-offset: 2px;
 }
 
 .main{
@@ -104,3 +86,21 @@ body{ margin:0; background:var(--page); color:var(--ink); font-family: system-ui
 .footer a{ color:var(--muted); text-decoration:none; }
 .footer a:hover{ text-decoration:underline; }
 .dot{ opacity:.5; }
+
+@media (max-width: 900px){
+  .topbar{
+    padding: 0 12px;
+  }
+
+  .brand{
+    min-width: 0;
+  }
+  .brandName{
+    font-size: 15px;
+  }
+
+  .app,
+  .main{
+    overflow-x: hidden;
+  }
+}

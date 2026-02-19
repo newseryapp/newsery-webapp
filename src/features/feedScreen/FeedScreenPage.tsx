@@ -6,6 +6,7 @@ import { formatRelativeTime } from "../../app/utils/time";
 import "./feedScreen.css";
 
 type Mode = "list" | "reader";
+const FS_PANEL_COUNT = 3;
 
 function selectedToMix(selected: string[], size: number) {
   const cats = (selected || []).filter(Boolean);
@@ -30,7 +31,15 @@ export default function FeedScreenPage() {
 
   const [mode, setMode] = useState<Mode>("list");
   const [readerUrl, setReaderUrl] = useState<string>("");
+  const [activeIndex, setActiveIndex] = useState(1);
 
+  const fsScrollerRef = useRef<HTMLDivElement | null>(null);
+  const fsScrollEndTimerRef = useRef<number | null>(null);
+  const fsProgrammaticTimerRef = useRef<number | null>(null);
+  const isInitRef = useRef(true);
+  const isProgrammaticScrollRef = useRef(false);
+  const isScrollSessionRef = useRef(false);
+  const scrollStartIndexRef = useRef(1);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const scrollTopByFeedId = useRef<Record<string, number>>({});
 
@@ -42,6 +51,45 @@ export default function FeedScreenPage() {
     () => itemsByFeedId[activeFeedId] || [],
     [itemsByFeedId, activeFeedId],
   );
+
+  function getScrollerIndex(scroller: HTMLDivElement) {
+    const width = scroller.clientWidth || 1;
+    const raw = Math.round(scroller.scrollLeft / width);
+    return Math.max(0, Math.min(FS_PANEL_COUNT - 1, raw));
+  }
+
+  function updateActiveIndexFromScroller() {
+    const scroller = fsScrollerRef.current;
+    if (!scroller) return;
+    const idx = getScrollerIndex(scroller);
+    setActiveIndex((prev) => (prev === idx ? prev : idx));
+  }
+
+  function snapToMiddleInstant() {
+    const scroller = fsScrollerRef.current;
+    if (!scroller) return;
+    const width = scroller.clientWidth || 0;
+    if (width > 0) scroller.scrollLeft = width;
+  }
+
+  function scrollToPanel(index: number) {
+    const scroller = fsScrollerRef.current;
+    if (!scroller) return;
+    const width = scroller.clientWidth || 0;
+    const target = Math.max(0, Math.min(FS_PANEL_COUNT - 1, index));
+    if (width <= 0) return;
+
+    isProgrammaticScrollRef.current = true;
+    if (fsProgrammaticTimerRef.current !== null) {
+      window.clearTimeout(fsProgrammaticTimerRef.current);
+    }
+    scroller.scrollTo({ left: target * width, behavior: "smooth" });
+    setActiveIndex(target);
+    fsProgrammaticTimerRef.current = window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+      fsProgrammaticTimerRef.current = null;
+    }, 350);
+  }
 
   // initial load items for first feed
   useEffect(() => {
@@ -105,6 +153,107 @@ export default function FeedScreenPage() {
   useEffect(() => {
     saveSaved(saved);
   }, [saved]);
+
+  // Mobile swipe/snap stabilizer for 3 columns
+  useEffect(() => {
+    const scroller = fsScrollerRef.current;
+    if (!scroller) return;
+
+    let rafId: number | null = null;
+    let initRafId: number | null = null;
+    const initTimerIds: number[] = [];
+    const isMobile = () => window.innerWidth <= 900;
+
+    const onScroll = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        updateActiveIndexFromScroller();
+
+        if (!isMobile()) return;
+        if (isInitRef.current) return;
+
+        if (!isScrollSessionRef.current) {
+          isScrollSessionRef.current = true;
+          scrollStartIndexRef.current = getScrollerIndex(scroller);
+        }
+
+        if (fsScrollEndTimerRef.current !== null) {
+          window.clearTimeout(fsScrollEndTimerRef.current);
+        }
+        fsScrollEndTimerRef.current = window.setTimeout(() => {
+          if (isInitRef.current || isProgrammaticScrollRef.current) {
+            isScrollSessionRef.current = false;
+            fsScrollEndTimerRef.current = null;
+            return;
+          }
+
+          const width = scroller.clientWidth || 1;
+          const raw = getScrollerIndex(scroller);
+          const delta = raw - scrollStartIndexRef.current;
+          const deltaClamped = Math.max(-1, Math.min(1, delta));
+          const target = Math.max(
+            0,
+            Math.min(FS_PANEL_COUNT - 1, scrollStartIndexRef.current + deltaClamped),
+          );
+          scroller.scrollTo({ left: target * width, behavior: "smooth" });
+          setActiveIndex(target);
+          isScrollSessionRef.current = false;
+          fsScrollEndTimerRef.current = null;
+        }, 120);
+      });
+    };
+
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+
+    if (isMobile()) {
+      isInitRef.current = true;
+      initRafId = window.requestAnimationFrame(() => {
+        snapToMiddleInstant();
+        updateActiveIndexFromScroller();
+      });
+
+      initTimerIds.push(
+        window.setTimeout(() => {
+          snapToMiddleInstant();
+          updateActiveIndexFromScroller();
+        }, 50),
+      );
+      initTimerIds.push(
+        window.setTimeout(() => {
+          snapToMiddleInstant();
+          updateActiveIndexFromScroller();
+        }, 250),
+      );
+      initTimerIds.push(
+        window.setTimeout(() => {
+          snapToMiddleInstant();
+          updateActiveIndexFromScroller();
+          isInitRef.current = false;
+        }, 400),
+      );
+    } else {
+      isInitRef.current = false;
+      updateActiveIndexFromScroller();
+    }
+
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      if (initRafId !== null) window.cancelAnimationFrame(initRafId);
+      initTimerIds.forEach((id) => window.clearTimeout(id));
+      if (fsScrollEndTimerRef.current !== null) {
+        window.clearTimeout(fsScrollEndTimerRef.current);
+        fsScrollEndTimerRef.current = null;
+      }
+      if (fsProgrammaticTimerRef.current !== null) {
+        window.clearTimeout(fsProgrammaticTimerRef.current);
+        fsProgrammaticTimerRef.current = null;
+      }
+      isProgrammaticScrollRef.current = false;
+      isScrollSessionRef.current = false;
+    };
+  }, []);
 
   function openFeed(feedId: string) {
     // store current scrollTop
@@ -256,8 +405,12 @@ export default function FeedScreenPage() {
   return (
     <div className="fs-page">
       <div className="fs-grid">
-        {/* LEFT: My Feeds */}
-        <section className="fs-panel">
+        <div
+          className="fsScroller"
+          ref={fsScrollerRef}
+        >
+          {/* LEFT: My Feeds */}
+          <section className="fs-panel">
           <div className="fs-panelHead">MY FEEDS</div>
           <div className="fs-panelBody fs-leftList">
             {feeds.length === 0 ? (
@@ -290,10 +443,10 @@ export default function FeedScreenPage() {
               })
             )}
           </div>
-        </section>
+          </section>
 
-        {/* CENTER: Feed / Reader */}
-        <section className="fs-panel fs-center">
+          {/* CENTER: Feed / Reader */}
+          <section className="fs-panel fs-center">
           <div className="fs-panelHead fs-centerHead">
             <div className="fs-centerTitle">{activeFeed?.name || "FEED"}</div>
             {mode === "reader" ? (
@@ -364,10 +517,10 @@ export default function FeedScreenPage() {
               </div>
             </div>
           )}
-        </section>
+          </section>
 
-        {/* RIGHT: Saved */}
-        <section className="fs-panel">
+          {/* RIGHT: Saved */}
+          <section className="fs-panel">
           <div className="fs-panelHead">SAVED ARTICLES</div>
           <div className="fs-panelBody">
             <div className="fs-savedList">
@@ -418,7 +571,21 @@ export default function FeedScreenPage() {
               )}
             </div>
           </div>
-        </section>
+          </section>
+        </div>
+        <div className="fsDots" aria-label="Feed panels">
+          {Array.from({ length: FS_PANEL_COUNT }, (_, idx) => (
+            <button
+              type="button"
+              key={idx}
+              className={`fsDot ${activeIndex === idx ? "isActive" : ""}`}
+              onClick={() => scrollToPanel(idx)}
+              aria-label={`Go to panel ${idx + 1}`}
+            >
+              {activeIndex === idx ? "●" : "○"}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
