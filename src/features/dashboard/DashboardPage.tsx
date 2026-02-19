@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import SaveFeedModal from "./components/SaveFeedModal";
 import MyFeedsPanel, { type Feed } from "./components/MyFeedsPanel";
@@ -17,6 +17,7 @@ const MIN_WEIGHT = 5;
 
 const MIN_SELECT = 2;
 const MAX_SELECT = 4;
+const DASH_PANEL_COUNT = 3;
 
 export default function DashboardPage() {
   const categoryIdSet = new Set(CATEGORIES.map((c) => c.id));
@@ -108,6 +109,31 @@ export default function DashboardPage() {
   const [savedMsg, setSavedMsg] = useState<string>(""); // kısa uyarı yazısı
 
   const [saveOpen, setSaveOpen] = useState(false);
+  const dashScrollerRef = useRef<HTMLDivElement | null>(null);
+  const isScrollingRef = useRef(false);
+  const scrollStartIndexRef = useRef<number>(0);
+  const scrollEndTimerRef = useRef<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  function getScrollIndex(scroller: HTMLDivElement) {
+    const width = scroller.clientWidth || 1;
+    const raw = Math.round(scroller.scrollLeft / width);
+    return Math.max(0, Math.min(DASH_PANEL_COUNT - 1, raw));
+  }
+
+  function updateActiveIndexFromScroll() {
+    const scroller = dashScrollerRef.current;
+    if (!scroller) return;
+    const idx = getScrollIndex(scroller);
+    setActiveIndex((prev) => (prev === idx ? prev : idx));
+  }
+
+  function scrollToPanel(index: number) {
+    const scroller = dashScrollerRef.current;
+    if (!scroller) return;
+    const clamped = Math.max(0, Math.min(DASH_PANEL_COUNT - 1, index));
+    scroller.scrollTo({ left: clamped * scroller.clientWidth, behavior: "smooth" });
+  }
 
   useEffect(() => {
     try {
@@ -117,6 +143,72 @@ export default function DashboardPage() {
       // ignore
     }
   }, [feeds]);
+
+  useEffect(() => {
+    const scroller = dashScrollerRef.current;
+    if (!scroller) return;
+
+    let rafId: number | null = null;
+    let initRafId: number | null = null;
+    const isMobile = () => window.innerWidth <= 900;
+
+    const onScroll = () => {
+      if (isMobile()) {
+        if (!isScrollingRef.current) {
+          isScrollingRef.current = true;
+          scrollStartIndexRef.current = getScrollIndex(scroller);
+        }
+
+        if (scrollEndTimerRef.current !== null) {
+          window.clearTimeout(scrollEndTimerRef.current);
+        }
+        scrollEndTimerRef.current = window.setTimeout(() => {
+          const width = scroller.clientWidth || 1;
+          const raw = getScrollIndex(scroller);
+          const delta = raw - scrollStartIndexRef.current;
+          const deltaClamped = Math.max(-1, Math.min(1, delta));
+          const target = Math.max(
+            0,
+            Math.min(
+              DASH_PANEL_COUNT - 1,
+              scrollStartIndexRef.current + deltaClamped,
+            ),
+          );
+
+          scroller.scrollTo({ left: target * width, behavior: "smooth" });
+          setActiveIndex(target);
+          isScrollingRef.current = false;
+          scrollEndTimerRef.current = null;
+        }, 120);
+      }
+
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        updateActiveIndexFromScroll();
+      });
+    };
+
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    if (window.innerWidth <= 900) {
+      initRafId = window.requestAnimationFrame(() => {
+        scroller.scrollLeft = 0;
+        updateActiveIndexFromScroll();
+      });
+    } else {
+      updateActiveIndexFromScroll();
+    }
+
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      if (initRafId !== null) window.cancelAnimationFrame(initRafId);
+      if (scrollEndTimerRef.current !== null) {
+        window.clearTimeout(scrollEndTimerRef.current);
+        scrollEndTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const canSave = selected.length >= MIN_SELECT;
 
@@ -293,206 +385,224 @@ export default function DashboardPage() {
           resetToDefault();
         }}
       >
-        {/* LEFT */}
-        <section className="panel" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="panelTitle">
-            SELECT YOUR CATEGORIES
-            <div className="panelHint">
-              Pick {MIN_SELECT}–{MAX_SELECT} categories
-            </div>
-          </div>
-
-          <div
-            className={`panelBody categoryList ${editingFeedId ? "disabledPanel" : ""}`}
-          >
-            {CATEGORIES.map((cat) => {
-              const selectedNow = isSelected(cat.id);
-              const disabled = !selectedNow && !canSelectMore;
-
-              return (
-                <button
-                  key={cat.id}
-                  className={`catBtn ${selectedNow ? "active" : ""}`}
-                  onClick={() => toggleCategory(cat.id)}
-                  disabled={editingFeedId !== null || disabled}
-                  title={
-                    disabled
-                      ? `Max ${MAX_SELECT} categories selected`
-                      : selectedNow
-                        ? "Click to remove"
-                        : "Click to add"
-                  }
-                >
-                  <span>{cat.label}</span>
-                  {selectedNow ? <span className="tag">Selected</span> : null}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="panelFooter">
-            <div className="counter">
-              Selected: <strong>{mixSelected.length}</strong> / {MAX_SELECT}
-            </div>
-          </div>
-        </section>
-
-        {/* MIDDLE */}
-        <section className="panel panelMid" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="panelTitle">
-            ADJUST YOUR MIX
-            {mixMode === "edit" && editingFeedName ? (
-              <span className="panelSub"> — {editingFeedName}</span>
-            ) : null}
-          </div>
-
-          <div className="panelBody">
-            <div className="mixSelected">
-              {mixSelected.map((c) => (
-                <button
-                  key={c}
-                  className={`mixChip ${c === mixActiveCategory ? "on" : ""}`}
-                  onClick={() => setActiveCategory(c)}
-                  title="Set active"
-                >
-                  {idToLabel(c) ?? c}
-                </button>
-              ))}
+        <div
+          className="dashScroller"
+          ref={dashScrollerRef}
+        >
+          {/* LEFT */}
+          <section className="panel" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="panelTitle">
+              SELECT YOUR CATEGORIES
+              <div className="panelHint">
+                Pick {MIN_SELECT}–{MAX_SELECT} categories
+              </div>
             </div>
 
-            <div className="mixList">
-              {mixSelected.map((c) => {
-                const value = mixWeights[c] ?? 0;
+            <div
+              className={`panelBody categoryList ${editingFeedId ? "disabledPanel" : ""}`}
+            >
+              {CATEGORIES.map((cat) => {
+                const selectedNow = isSelected(cat.id);
+                const disabled = !selectedNow && !canSelectMore;
 
                 return (
-                  <div
-                    key={c}
-                    className={`mixRow ${c === mixActiveCategory ? "active" : ""}`}
+                  <button
+                    key={cat.id}
+                    className={`catBtn ${selectedNow ? "active" : ""}`}
+                    onClick={() => toggleCategory(cat.id)}
+                    disabled={editingFeedId !== null || disabled}
+                    title={
+                      disabled
+                        ? `Max ${MAX_SELECT} categories selected`
+                        : selectedNow
+                          ? "Click to remove"
+                          : "Click to add"
+                    }
                   >
-                    <div className="mixLabel">{idToLabel(c) ?? c}</div>
-
-                    <div className="mixControls">
-                      <button
-                        onClick={() =>
-                          mixMode === "edit"
-                            ? adjustEditWeight(c, -STEP)
-                            : adjustDraftWeight(c, -STEP)
-                        }
-                        disabled={value <= MIN_WEIGHT}
-                      >
-                        –
-                      </button>
-
-                      <div className="mixBar">
-                        <div
-                          className="mixFill"
-                          style={{ width: `${value}%` }}
-                        />
-                      </div>
-
-                      <button
-                        onClick={() =>
-                          mixMode === "edit"
-                            ? adjustEditWeight(c, STEP)
-                            : adjustDraftWeight(c, STEP)
-                        }
-                        disabled={value >= 100}
-                      >
-                        +
-                      </button>
-
-                      <div className="mixValue">{value}%</div>
-                    </div>
-                  </div>
+                    <span>{cat.label}</span>
+                    {selectedNow ? <span className="tag">Selected</span> : null}
+                  </button>
                 );
               })}
             </div>
 
-            <div className="placeholder" style={{ height: 140 }}>
-              {mixSelected.length === 0 ? (
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontWeight: 800 }}>
-                    Select {MIN_SELECT}–{MAX_SELECT} categories to start
-                  </div>
-                  <div style={{ marginTop: 8, opacity: 0.75, fontSize: 13 }}>
-                    Then adjust the weights here.
-                  </div>
-                </div>
-              ) : (
-                <>
-                  Active:{" "}
-                  <strong>
-                    {mixActiveCategory ? idToLabel(mixActiveCategory) ?? mixActiveCategory : ""}
-                  </strong>
-                  <div style={{ marginTop: 8, opacity: 0.75, fontSize: 13 }}>
-                    Selected set: {selectedLabel}
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="saveRow">
-              <button
-                className="saveBtn"
-                disabled={mixMode === "edit" ? !isEditDirty : !canSave}
-                onClick={() => {
-                  if (mixMode === "draft") {
-                    if (!canSave) return;
-                    setSaveOpen(true);
-                    return;
-                  }
-
-                  // EDIT mode save
-                  if (!editingFeedId || !editWeights) return;
-
-                  setFeeds((prev) =>
-                    prev.map((f) =>
-                      f.id === editingFeedId
-                        ? { ...f, weights: editWeights, updatedAt: Date.now() }
-                        : f
-                    )
-                  );
-
-                  const name = editingFeedName ?? "this feed";
-                  resetToDefault();
-                  setSavedMsg(`Changes saved to "${name}"`);
-                  setTimeout(() => setSavedMsg(""), 2000);
-                }}
-              >
-                {mixMode === "edit" ? "SAVE CHANGES" : "SAVE YOUR FEED"}
-              </button>
-            </div>
-
-            {mixMode === "draft" && !canSave ? (
-              <div className="microHint">
-                Select at least {MIN_SELECT} categories to save.
+            <div className="panelFooter">
+              <div className="counter">
+                Selected: <strong>{mixSelected.length}</strong> / {MAX_SELECT}
               </div>
-            ) : null}
-          </div>
-        </section>
+            </div>
+          </section>
 
-        {/* RIGHT */}
-        <section className="panel" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="panelTitle">MY FEEDS</div>
-          <div className="panelBody">
-            <MyFeedsPanel
-              feeds={feeds}
-              activeFeedId={activeFeedId}
-              onSelect={(id) => openFeedForEdit(id)}
-              onRemove={(id) => {
-                const ok = window.confirm("Remove this feed?");
-                if (!ok) return;
+          {/* MIDDLE */}
+          <section className="panel panelMid" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="panelTitle">
+              ADJUST YOUR MIX
+              {mixMode === "edit" && editingFeedName ? (
+                <span className="panelSub"> — {editingFeedName}</span>
+              ) : null}
+            </div>
 
-                setFeeds((prev) => prev.filter((f) => f.id !== id));
+            <div className="panelBody">
+              <div className="mixSelected">
+                {mixSelected.map((c) => (
+                  <button
+                    key={c}
+                    className={`mixChip ${c === mixActiveCategory ? "on" : ""}`}
+                    onClick={() => setActiveCategory(c)}
+                    title="Set active"
+                  >
+                    {idToLabel(c) ?? c}
+                  </button>
+                ))}
+              </div>
 
-                // Dashboard'da edit seçimi olarak aktif olan silindiyse, sadece seçimi düşür.
-                if (activeFeedId === id) {
-                  setActiveFeedId(null);
-                }
-              }}
-            />
-          </div>
-        </section>
+              <div className="mixList">
+                {mixSelected.map((c) => {
+                  const value = mixWeights[c] ?? 0;
+
+                  return (
+                    <div
+                      key={c}
+                      className={`mixRow ${c === mixActiveCategory ? "active" : ""}`}
+                    >
+                      <div className="mixLabel">{idToLabel(c) ?? c}</div>
+
+                      <div className="mixControls">
+                        <button
+                          onClick={() =>
+                            mixMode === "edit"
+                              ? adjustEditWeight(c, -STEP)
+                              : adjustDraftWeight(c, -STEP)
+                          }
+                          disabled={value <= MIN_WEIGHT}
+                        >
+                          –
+                        </button>
+
+                        <div className="mixBar">
+                          <div
+                            className="mixFill"
+                            style={{ width: `${value}%` }}
+                          />
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            mixMode === "edit"
+                              ? adjustEditWeight(c, STEP)
+                              : adjustDraftWeight(c, STEP)
+                          }
+                          disabled={value >= 100}
+                        >
+                          +
+                        </button>
+
+                        <div className="mixValue">{value}%</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="placeholder" style={{ height: 140 }}>
+                {mixSelected.length === 0 ? (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontWeight: 800 }}>
+                      Select {MIN_SELECT}–{MAX_SELECT} categories to start
+                    </div>
+                    <div style={{ marginTop: 8, opacity: 0.75, fontSize: 13 }}>
+                      Then adjust the weights here.
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    Active:{" "}
+                    <strong>
+                      {mixActiveCategory ? idToLabel(mixActiveCategory) ?? mixActiveCategory : ""}
+                    </strong>
+                    <div style={{ marginTop: 8, opacity: 0.75, fontSize: 13 }}>
+                      Selected set: {selectedLabel}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="saveRow">
+                <button
+                  className="saveBtn"
+                  disabled={mixMode === "edit" ? !isEditDirty : !canSave}
+                  onClick={() => {
+                    if (mixMode === "draft") {
+                      if (!canSave) return;
+                      setSaveOpen(true);
+                      return;
+                    }
+
+                    // EDIT mode save
+                    if (!editingFeedId || !editWeights) return;
+
+                    setFeeds((prev) =>
+                      prev.map((f) =>
+                        f.id === editingFeedId
+                          ? { ...f, weights: editWeights, updatedAt: Date.now() }
+                          : f
+                      )
+                    );
+
+                    const name = editingFeedName ?? "this feed";
+                    resetToDefault();
+                    setSavedMsg(`Changes saved to "${name}"`);
+                    setTimeout(() => setSavedMsg(""), 2000);
+                  }}
+                >
+                  {mixMode === "edit" ? "SAVE CHANGES" : "SAVE YOUR FEED"}
+                </button>
+              </div>
+
+              {mixMode === "draft" && !canSave ? (
+                <div className="microHint">
+                  Select at least {MIN_SELECT} categories to save.
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          {/* RIGHT */}
+          <section className="panel" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="panelTitle">MY FEEDS</div>
+            <div className="panelBody">
+              <MyFeedsPanel
+                feeds={feeds}
+                activeFeedId={activeFeedId}
+                onSelect={(id) => openFeedForEdit(id)}
+                onRemove={(id) => {
+                  const ok = window.confirm("Remove this feed?");
+                  if (!ok) return;
+
+                  setFeeds((prev) => prev.filter((f) => f.id !== id));
+
+                  // Dashboard'da edit seçimi olarak aktif olan silindiyse, sadece seçimi düşür.
+                  if (activeFeedId === id) {
+                    setActiveFeedId(null);
+                  }
+                }}
+              />
+            </div>
+          </section>
+        </div>
+        <div className="dashDots" aria-label="Dashboard panels">
+          {Array.from({ length: DASH_PANEL_COUNT }, (_, idx) => (
+            <button
+              type="button"
+              key={idx}
+              className={`dashDot ${activeIndex === idx ? "isActive" : ""}`}
+              onClick={() => scrollToPanel(idx)}
+              aria-label={`Go to panel ${idx + 1}`}
+            >
+              {activeIndex === idx ? "●" : "○"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <SaveFeedModal

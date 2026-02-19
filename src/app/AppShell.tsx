@@ -21,22 +21,17 @@ export default function AppShell() {
           </a>
           <div className="brandText">
             <div className="brandName">Newsery</div>
-            <div className="brandTagline">Your Calm, personal news app.</div>
           </div>
         </div>
 
         <div className="topbarRight">
           <button
             type="button"
-            className="topBtn"
+            className="topbarDashBtn"
             onClick={() => navigate("/dashboard")}
           >
             Dashboard
           </button>
-          <div className="pill">30 Days Left</div>
-          <a className="cta" href="#" onClick={(e) => e.preventDefault()}>
-            Get Mobile App
-          </a>
         </div>
       </header>
 
