@@ -2,10 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Article, Feed } from "./types";
 import { loadFeeds, loadSaved, saveSaved } from "./storage";
 import { fetchFeedFromApi, weightsToMix } from "./fetchFeed";
+import { getDummyArticlesSized } from "./dummy";
 import { formatRelativeTime } from "../../app/utils/time";
+import AdSlotInline from "./components/AdSlotInline";
+import AdSlotRail from "./components/AdSlotRail";
 import "./feedScreen.css";
 
 type Mode = "list" | "reader";
+type FeedAdItem = { kind: "ad"; id: string };
 const FS_PANEL_COUNT = 3;
 
 function selectedToMix(selected: string[], size: number) {
@@ -23,11 +27,37 @@ function selectedToMix(selected: string[], size: number) {
   return mix;
 }
 
+function injectInlineAds<T extends { id: string }>(
+  items: T[],
+  interval = 10,
+): Array<T | FeedAdItem> {
+  if (!items || items.length === 0) return [];
+
+  const out: Array<T | FeedAdItem> = [];
+  let slotCount = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    out.push(items[i]);
+
+    const isBoundary = (i + 1) % interval === 0;
+    const notLastItem = i !== items.length - 1;
+
+    if (isBoundary && notLastItem) {
+      slotCount++;
+      out.push({ kind: "ad", id: `ad-inline-${slotCount}` });
+    }
+  }
+
+  return out;
+}
+
 export default function FeedScreenPage() {
   const feeds = useMemo<Feed[]>(() => loadFeeds(), []);
   const [activeFeedId, setActiveFeedId] = useState<string>(() => feeds[0]?.id || "");
   const [itemsByFeedId, setItemsByFeedId] = useState<Record<string, Article[]>>({});
   const [saved, setSaved] = useState<Article[]>(() => loadSaved());
+  const useDummyFeed = import.meta.env.VITE_USE_DUMMY_FEED === "true";
+  const dummyFeedIdFallback = "dummy-default";
 
   const [mode, setMode] = useState<Mode>("list");
   const [readerUrl, setReaderUrl] = useState<string>("");
@@ -47,9 +77,11 @@ export default function FeedScreenPage() {
     () => feeds.find((f) => f.id === activeFeedId) || feeds[0],
     [feeds, activeFeedId],
   );
+  const activeItemsFeedId =
+    useDummyFeed && !activeFeedId ? dummyFeedIdFallback : activeFeedId;
   const activeItems = useMemo(
-    () => itemsByFeedId[activeFeedId] || [],
-    [itemsByFeedId, activeFeedId],
+    () => itemsByFeedId[activeItemsFeedId] || [],
+    [itemsByFeedId, activeItemsFeedId],
   );
 
   function getScrollerIndex(scroller: HTMLDivElement) {
@@ -93,12 +125,24 @@ export default function FeedScreenPage() {
 
   // initial load items for first feed
   useEffect(() => {
-    if (!activeFeedId) return;
-    if (itemsByFeedId[activeFeedId]) return;
+    const feedId =
+      useDummyFeed && !activeFeedId ? dummyFeedIdFallback : activeFeedId;
+    if (!feedId) return;
+    if (itemsByFeedId[feedId]) return;
 
     let cancelled = false;
     (async () => {
       try {
+        if (useDummyFeed) {
+          const articles = getDummyArticlesSized(feedId, 50);
+          if (cancelled) return;
+          setItemsByFeedId((prev) => {
+            if (prev[feedId]) return prev;
+            return { ...prev, [feedId]: articles };
+          });
+          return;
+        }
+
         console.log("[activeFeed]", activeFeed);
         const feedAny = activeFeed as any;
 
@@ -147,7 +191,7 @@ export default function FeedScreenPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeFeedId, activeFeed, itemsByFeedId]);
+  }, [activeFeedId, activeFeed, itemsByFeedId, useDummyFeed]);
 
   // persist saved
   useEffect(() => {
@@ -256,15 +300,25 @@ export default function FeedScreenPage() {
   }, []);
 
   function openFeed(feedId: string) {
+    const effectiveFeedId =
+      useDummyFeed && !feedId ? dummyFeedIdFallback : feedId;
+
     // store current scrollTop
     if (listScrollRef.current && activeFeedId) {
       scrollTopByFeedId.current[activeFeedId] = listScrollRef.current.scrollTop;
     }
 
-    setActiveFeedId(feedId);
+    setActiveFeedId(effectiveFeedId);
 
     // ensure items exist
-    if (!itemsByFeedId[feedId]) {
+    if (!itemsByFeedId[effectiveFeedId]) {
+      if (useDummyFeed) {
+        const articles = getDummyArticlesSized(effectiveFeedId, 50);
+        setItemsByFeedId((prev) => {
+          if (prev[effectiveFeedId]) return prev;
+          return { ...prev, [effectiveFeedId]: articles };
+        });
+      } else {
       const nextFeed = feeds.find((f) => f.id === feedId) || feeds[0];
       const feedAny = nextFeed as any;
       const rawMix =
@@ -309,6 +363,7 @@ export default function FeedScreenPage() {
         .catch((err) => {
           console.error(err);
         });
+      }
     }
 
     // if we were in reader, go back to list when switching feed
@@ -319,7 +374,7 @@ export default function FeedScreenPage() {
     requestAnimationFrame(() => {
       const el = listScrollRef.current;
       if (!el) return;
-      el.scrollTop = scrollTopByFeedId.current[feedId] || 0;
+      el.scrollTop = scrollTopByFeedId.current[effectiveFeedId] || 0;
     });
   }
 
@@ -409,6 +464,10 @@ export default function FeedScreenPage() {
           className="fsScroller"
           ref={fsScrollerRef}
         >
+          <aside className="fs-adGutter fs-adGutterLeft">
+            <AdSlotRail />
+          </aside>
+
           {/* LEFT: My Feeds */}
           <section className="fs-panel">
           <div className="fs-panelHead">MY FEEDS</div>
@@ -458,45 +517,53 @@ export default function FeedScreenPage() {
 
           {mode === "list" ? (
             <div className="fs-panelBody fs-stream" ref={listScrollRef}>
-              {activeItems.map((a) => (
-                <article
-                  key={a.id}
-                  className="fs-articleCard"
-                  onClick={() => {
-                    window.open(a.url, "_blank", "noopener,noreferrer");
-                  }}
-                  role="button"
-                >
-                  {a.imageUrl ? (
-                    <img className="fs-articleImg" src={a.imageUrl} alt="" />
-                  ) : (
-                    <div className="fs-articleImg fs-articleImgEmpty" />
-                  )}
-                  <div className="fs-articleContent">
-                    <div className="fs-articleTitle clamp-2">{a.title}</div>
-                    {a.description ? (
-                      <div className="fs-articleDesc clamp-3">{a.description}</div>
-                    ) : null}
-                    <div className="fs-articleMeta">
-                      <span>{a.sourceName || "Source"}</span>
-                      <span className="fs-dot">•</span>
-                      <span>{formatRelativeTime(a.publishedAt)}</span>
-                    </div>
+              {injectInlineAds(activeItems, 12).map((item) => {
+                if ("kind" in item && item.kind === "ad") {
+                  return <AdSlotInline key={item.id} />;
+                }
 
-                    <div
-                      className="fs-articleActions"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button className="fs-linkBtn" onClick={() => share(a.url)}>
-                        Share
-                      </button>
-                      <button className="fs-linkBtn" onClick={() => toggleSave(a)}>
-                        {isSaved(a.id) ? "Saved" : "Save"}
-                      </button>
+                const a = item as Article;
+
+                return (
+                  <article
+                    key={a.id}
+                    className="fs-articleCard"
+                    onClick={() => {
+                      window.open(a.url, "_blank", "noopener,noreferrer");
+                    }}
+                    role="button"
+                  >
+                    {a.imageUrl ? (
+                      <img className="fs-articleImg" src={a.imageUrl} alt="" />
+                    ) : (
+                      <div className="fs-articleImg fs-articleImgEmpty" />
+                    )}
+                    <div className="fs-articleContent">
+                      <div className="fs-articleTitle clamp-2">{a.title}</div>
+                      {a.description ? (
+                        <div className="fs-articleDesc clamp-3">{a.description}</div>
+                      ) : null}
+                      <div className="fs-articleMeta">
+                        <span>{a.sourceName || "Source"}</span>
+                        <span className="fs-dot">•</span>
+                        <span>{formatRelativeTime(a.publishedAt)}</span>
+                      </div>
+
+                      <div
+                        className="fs-articleActions"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button className="fs-linkBtn" onClick={() => share(a.url)}>
+                          Share
+                        </button>
+                        <button className="fs-linkBtn" onClick={() => toggleSave(a)}>
+                          {isSaved(a.id) ? "Saved" : "Save"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <div className="fs-panelBody fs-reader">
@@ -572,6 +639,10 @@ export default function FeedScreenPage() {
             </div>
           </div>
           </section>
+
+          <aside className="fs-adGutter fs-adGutterRight">
+            <AdSlotRail />
+          </aside>
         </div>
         <div className="fsDots" aria-label="Feed panels">
           {Array.from({ length: FS_PANEL_COUNT }, (_, idx) => (
