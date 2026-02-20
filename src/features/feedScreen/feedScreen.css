@@ -13,11 +13,22 @@
 .fsScroller{
   height: 100%;
   display: grid;
-  /* Desktop-only: 3 kolon her zaman kalsın (Dashboard ile aynı mantık). */
-  grid-template-columns: minmax(220px, 320px) minmax(420px, 720px) minmax(220px, 360px);
+  /* Desktop-only: outer gutters + 3 panel. */
+  grid-template-columns: 180px minmax(220px, 320px) minmax(420px, 720px) minmax(220px, 360px) 180px;
   grid-template-rows: 1fr;
   justify-content: center; /* Dashboard gibi ortala */
   gap: clamp(14px, 1.4vw, 18px); /* Dashboard ile aynı mantık */
+}
+
+.fs-adGutter{
+  align-self: center;
+  height: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.fs-adGutter .fs-adRail{
+  width: 100%;
 }
 
 .fsDots{
@@ -338,5 +349,86 @@
 
   .fsDot.isActive{
     opacity:1;
+  }
+}
+
+/* ---------- Inline Ad Placeholder (Feed) ---------- */
+.fs-adInline{
+  flex: 0 0 auto;
+  width: 100%;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(15,23,42,.02) 0 10px,
+      rgba(255,255,255,0) 10px 20px
+    ),
+    rgba(255,255,255,.78);
+  border: 1px dashed rgba(15,23,42,.22);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(15,23,42,.06);
+  padding: 14px;
+
+  /* Adsense uyumu icin guvenli cipa */
+  min-height: 250px;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-adInlineTop{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fs-adBadge{
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: rgba(15,23,42,.78);
+  background: rgba(15,23,42,.08);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.fs-adHint{
+  font-size: 12px;
+  color: rgba(15,23,42,.55);
+}
+
+@media (max-width: 900px){
+  .fs-adInline{
+    min-height: 250px;
+    padding: 12px;
+  }
+}
+
+/* ---------- Rail Ad Placeholder (Desktop only) ---------- */
+.fs-adRail{
+  width: 100%;
+  min-height: 600px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px dashed rgba(15,23,42,.22);
+  box-shadow: 0 6px 18px rgba(15,23,42,.06);
+  padding: 14px;
+
+  background:
+    linear-gradient(0deg, rgba(255,255,255,.78), rgba(255,255,255,.78)),
+    repeating-linear-gradient(
+      135deg,
+      rgba(15,23,42,.04) 0px,
+      rgba(15,23,42,.04) 10px,
+      rgba(15,23,42,.00) 10px,
+      rgba(15,23,42,.00) 20px
+    );
+}
+
+/* Mobile swipe layout: rail ad slotlarini tamamen gizle */
+@media (max-width: 900px){
+  .fs-adGutter{
+    display: none !important;
   }
 }

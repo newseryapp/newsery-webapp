@@ -133,3 +133,23 @@ export function getDummyArticles(feedId: string): Article[] {
     ),
   ];
 }
+
+export function getDummyArticlesSized(
+  feedId: string,
+  size = 50,
+): Article[] {
+  const base = getDummyArticles(feedId);
+  if (!base.length || size <= 0) return [];
+
+  return Array.from({ length: size }, (_, idx) => {
+    const source = base[idx % base.length];
+    const serial = idx + 1;
+
+    return {
+      ...source,
+      id: `${source.id}-${serial}`,
+      url: `${source.url}?feed=${encodeURIComponent(feedId || "default")}&item=${serial}`,
+      title: `${source.title} #${serial}`,
+    };
+  });
+}
